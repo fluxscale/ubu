@@ -22,7 +22,7 @@ rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/MacOS"
 mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/Resources"
 
-cp "$BUILD_DIR/Ubu" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
+cp "$BUILD_DIR/ubu" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 cp "$PROJECT_ROOT/Resources/Info.plist" "$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
 
 # Create DMG

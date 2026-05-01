@@ -1,7 +1,9 @@
 import XCTest
-@testable import Ubu
+@testable import ubu
 
 final class DisplayManagerTests: XCTestCase {
+
+    // CG coordinates: origin top-left of primary, Y increases downward
 
     func testEdgeZonesForBottomDock() {
         let primary = ScreenInfo(
@@ -11,21 +13,21 @@ final class DisplayManagerTests: XCTestCase {
         )
         let secondary = ScreenInfo(
             displayID: 2,
-            frame: CGRect(x: 2560, y: 0, width: 1920, height: 1080),
+            frame: CGRect(x: 2560, y: 360, width: 1920, height: 1080),
             isPrimary: false
         )
         let zones = DisplayManager.edgeZones(
             for: [primary, secondary],
             dockPosition: .bottom,
-            edgeThreshold: 2.0
+            edgeThreshold: 4.0
         )
-        XCTAssertEqual(zones.count, 1, "Should only have edge zone for non-primary screen")
+        XCTAssertEqual(zones.count, 1)
         let zone = zones[0]
         XCTAssertEqual(zone.displayID, 2)
         XCTAssertEqual(zone.rect.origin.x, 2560)
-        XCTAssertEqual(zone.rect.origin.y, 0)
+        XCTAssertEqual(zone.rect.origin.y, 360 + 1080 - 4.0, accuracy: 0.01)
         XCTAssertEqual(zone.rect.size.width, 1920)
-        XCTAssertEqual(zone.rect.size.height, 2.0)
+        XCTAssertEqual(zone.rect.size.height, 4.0)
     }
 
     func testEdgeZonesForLeftDock() {
@@ -42,12 +44,12 @@ final class DisplayManagerTests: XCTestCase {
         let zones = DisplayManager.edgeZones(
             for: [primary, secondary],
             dockPosition: .left,
-            edgeThreshold: 2.0
+            edgeThreshold: 4.0
         )
         let zone = zones[0]
         XCTAssertEqual(zone.rect.origin.x, 2560)
         XCTAssertEqual(zone.rect.origin.y, 0)
-        XCTAssertEqual(zone.rect.size.width, 2.0)
+        XCTAssertEqual(zone.rect.size.width, 4.0)
         XCTAssertEqual(zone.rect.size.height, 1080)
     }
 
@@ -65,11 +67,11 @@ final class DisplayManagerTests: XCTestCase {
         let zones = DisplayManager.edgeZones(
             for: [primary, secondary],
             dockPosition: .right,
-            edgeThreshold: 2.0
+            edgeThreshold: 4.0
         )
         let zone = zones[0]
-        XCTAssertEqual(zone.rect.origin.x, 2560 + 1920 - 2.0, accuracy: 0.01)
-        XCTAssertEqual(zone.rect.size.width, 2.0)
+        XCTAssertEqual(zone.rect.origin.x, 2560 + 1920 - 4.0, accuracy: 0.01)
+        XCTAssertEqual(zone.rect.size.width, 4.0)
         XCTAssertEqual(zone.rect.size.height, 1080)
     }
 
@@ -82,7 +84,7 @@ final class DisplayManagerTests: XCTestCase {
         let zones = DisplayManager.edgeZones(
             for: [primary],
             dockPosition: .bottom,
-            edgeThreshold: 2.0
+            edgeThreshold: 4.0
         )
         XCTAssertTrue(zones.isEmpty)
     }
@@ -90,21 +92,21 @@ final class DisplayManagerTests: XCTestCase {
     func testThreeScreensProducesTwoEdgeZones() {
         let screens = [
             ScreenInfo(displayID: 1, frame: CGRect(x: 0, y: 0, width: 2560, height: 1440), isPrimary: true),
-            ScreenInfo(displayID: 2, frame: CGRect(x: 2560, y: 0, width: 1920, height: 1080), isPrimary: false),
-            ScreenInfo(displayID: 3, frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080), isPrimary: false),
+            ScreenInfo(displayID: 2, frame: CGRect(x: 2560, y: 360, width: 1920, height: 1080), isPrimary: false),
+            ScreenInfo(displayID: 3, frame: CGRect(x: -1920, y: 360, width: 1920, height: 1080), isPrimary: false),
         ]
-        let zones = DisplayManager.edgeZones(for: screens, dockPosition: .bottom, edgeThreshold: 2.0)
+        let zones = DisplayManager.edgeZones(for: screens, dockPosition: .bottom, edgeThreshold: 4.0)
         XCTAssertEqual(zones.count, 2)
     }
 
-    func testPointInEdgeZone() {
+    func testPointInBottomEdgeZone() {
         let zone = EdgeZone(
             displayID: 2,
-            rect: CGRect(x: 2560, y: 0, width: 1920, height: 2.0)
+            rect: CGRect(x: 2560, y: 1076, width: 1920, height: 4.0)
         )
-        XCTAssertTrue(zone.contains(point: CGPoint(x: 3000, y: 1.0)))
-        XCTAssertFalse(zone.contains(point: CGPoint(x: 3000, y: 5.0)))
-        XCTAssertFalse(zone.contains(point: CGPoint(x: 100, y: 1.0)))
+        XCTAssertTrue(zone.contains(point: CGPoint(x: 3000, y: 1077)))
+        XCTAssertFalse(zone.contains(point: CGPoint(x: 3000, y: 500)))
+        XCTAssertFalse(zone.contains(point: CGPoint(x: 100, y: 1077)))
     }
 
     func testDockPositionFromDefaults() {

@@ -2,13 +2,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "Ubu",
+    name: "ubu",
     platforms: [
         .macOS(.v13)
     ],
     targets: [
         .executableTarget(
-            name: "Ubu",
+            name: "ubu",
             dependencies: [],
             path: "Sources/Ubu",
             resources: [
@@ -17,7 +17,7 @@ let package = Package(
         ),
         .testTarget(
             name: "UbuTests",
-            dependencies: ["Ubu"],
+            dependencies: ["ubu"],
             path: "Tests/UbuTests"
         )
     ]

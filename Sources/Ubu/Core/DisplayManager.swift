@@ -68,21 +68,27 @@ final class DisplayManager {
     }
 
     func refreshScreens() {
-        screens = NSScreen.screens.enumerated().map { index, screen in
-            let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? CGDirectDisplayID(index)
+        let mainID = CGMainDisplayID()
+        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: 16)
+        var displayCount: UInt32 = 0
+        CGGetOnlineDisplayList(16, &onlineDisplays, &displayCount)
+
+        screens = (0..<Int(displayCount)).map { i in
+            let id = onlineDisplays[i]
+            let bounds = CGDisplayBounds(id)
             return ScreenInfo(
-                displayID: displayID,
-                frame: screen.frame,
-                isPrimary: index == 0
+                displayID: id,
+                frame: bounds,
+                isPrimary: id == mainID
             )
         }
         dockPosition = DockPosition.current()
         edgeZones = DisplayManager.edgeZones(
             for: screens,
             dockPosition: dockPosition,
-            edgeThreshold: 2.0
+            edgeThreshold: 4.0
         )
-        Log.display.info("Refreshed screens: \(self.screens.count) displays, dock=\(self.dockPosition.rawValue), zones=\(self.edgeZones.count)")
+        Log.display.info("Refreshed screens: \(self.screens.count) displays, primary=\(mainID), dock=\(self.dockPosition.rawValue), zones=\(self.edgeZones.count)")
     }
 
     static func edgeZones(
@@ -98,7 +104,7 @@ final class DisplayManager {
                 case .bottom:
                     rect = CGRect(
                         x: screen.frame.origin.x,
-                        y: screen.frame.origin.y,
+                        y: screen.frame.origin.y + screen.frame.height - edgeThreshold,
                         width: screen.frame.width,
                         height: edgeThreshold
                     )

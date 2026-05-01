@@ -1,6 +1,10 @@
 # Swift / SwiftPM
 .build/
 .swiftpm/
+*.o
+*.d
+*.swiftdeps
+*.swiftdeps~
 *.xcodeproj
 *.xcworkspace
 xcuserdata/

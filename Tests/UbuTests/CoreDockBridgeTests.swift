@@ -1,5 +1,5 @@
 import XCTest
-@testable import Ubu
+@testable import ubu
 
 final class CoreDockBridgeTests: XCTestCase {
 
