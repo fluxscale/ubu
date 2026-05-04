@@ -4,7 +4,7 @@
 
 <h1 align="center">ubu</h1>
 
-The macOS menubar app that keeps your Dock locked where and when you want it.
+The menubar app that keeps your Dock locked when and where you want it.
 
 macOS moves your Dock to whichever screen you push your cursor against the bottom edge of. There's no built-in setting to disable this. **ubu** fixes that.
 
