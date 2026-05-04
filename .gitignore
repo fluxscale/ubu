@@ -10,6 +10,10 @@
 xcuserdata/
 DerivedData/
 
+# Generated
+icon-preview.html
+*.dmg
+
 # macOS
 .DS_Store
 .AppleDouble
