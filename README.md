@@ -1,16 +1,20 @@
-# ubu
+<p align="center">
+  <img src="Resources/ubu-logo.png" alt="ubu" width="200">
+</p>
 
-macOS menubar daemon that keeps your Dock locked to your primary display.
+<h1 align="center">ubu</h1>
+
+The macOS menubar app that keeps your Dock locked where and when you want it.
 
 macOS moves your Dock to whichever screen you push your cursor against the bottom edge of. There's no built-in setting to disable this. **ubu** fixes that.
 
-## Install
+<h2>Install</h2>
 
-### Download
+<h3>Download</h3>
 
 Grab the latest `.dmg` from [Releases](https://github.com/fluxscale/ubu/releases), open it, and drag `ubu.app` to Applications.
 
-### Build from source
+<h3>Build from source</h3>
 
 ```bash
 git clone https://github.com/fluxscale/ubu.git
@@ -19,13 +23,13 @@ swift build -c release
 # Binary at .build/release/ubu
 ```
 
-### Create DMG
+<h3>Create DMG</h3>
 
 ```bash
 Distribution/DMG/create-dmg.sh 1.0.0
 ```
 
-## Setup
+<h2>Setup</h2>
 
 1. Launch ubu — a paw print icon appears in your menubar
 2. Grant Accessibility permission when prompted (System Settings > Privacy & Security > Accessibility)
@@ -33,7 +37,7 @@ Distribution/DMG/create-dmg.sh 1.0.0
 
 ubu starts at login automatically. Toggle this from the menubar menu.
 
-## How it works
+<h2>How it works</h2>
 
 ubu uses three layers of defense:
 
@@ -45,7 +49,7 @@ ubu uses three layers of defense:
 
 All three layers use CG coordinates (`CGDisplayBounds`, `CGMainDisplayID`) for consistent screen geometry across the entire pipeline.
 
-## Menubar
+<h2>Menubar</h2>
 
 | Icon | State |
 |------|-------|
@@ -55,17 +59,17 @@ All three layers use CG coordinates (`CGDisplayBounds`, `CGMainDisplayID`) for c
 
 Menu options: Pause/Resume, Start at Login, Check for Updates, Quit.
 
-## Requirements
+<h2>Requirements</h2>
 
 - macOS 13.0 (Ventura) or later
 - Accessibility permission
 - Works with any number of displays and all Dock positions (bottom, left, right)
 
-## Updates
+<h2>Updates</h2>
 
 ubu checks GitHub Releases on launch and notifies you when a new version is available. You can also check manually from the menubar menu.
 
-## Architecture
+<h2>Architecture</h2>
 
 ```
 Sources/Ubu/
@@ -85,6 +89,6 @@ Sources/Ubu/
     └── UpdateChecker.swift       # GitHub Releases version check
 ```
 
-## License
+<h2>License</h2>
 
 [MIT](LICENSE)
