@@ -64,4 +64,28 @@ final class EventTapLayerTests: XCTestCase {
         let result = EventTapLayer.zoneContaining(point: CGPoint(x: 3000, y: 100.0), in: zones)
         XCTAssertNil(result)
     }
+
+    func testWarpTargetBottomEdge() {
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 1072, width: 1920, height: 8))
+        let point = CGPoint(x: 3000, y: 1075)
+        let target = EventTapLayer.warpTarget(from: point, zone: zone)
+        XCTAssertEqual(target.x, 3000, accuracy: 0.01)
+        XCTAssertEqual(target.y, 1072 - 6.0, accuracy: 0.01)
+    }
+
+    func testWarpTargetLeftEdge() {
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 8, height: 1080))
+        let point = CGPoint(x: 2562, y: 500)
+        let target = EventTapLayer.warpTarget(from: point, zone: zone)
+        XCTAssertEqual(target.x, 2560 + 8 + 6.0, accuracy: 0.01)
+        XCTAssertEqual(target.y, 500, accuracy: 0.01)
+    }
+
+    func testWarpTargetRightEdge() {
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 4472, y: 0, width: 8, height: 1080))
+        let point = CGPoint(x: 4477, y: 500)
+        let target = EventTapLayer.warpTarget(from: point, zone: zone)
+        XCTAssertEqual(target.x, 4472 - 6.0, accuracy: 0.01)
+        XCTAssertEqual(target.y, 500, accuracy: 0.01)
+    }
 }

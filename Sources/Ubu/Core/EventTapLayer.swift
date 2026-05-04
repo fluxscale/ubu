@@ -32,7 +32,7 @@ final class DwellTracker {
 final class EventTapLayer {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private let dwellTracker = DwellTracker(thresholdSeconds: 0.3)
+    private let dwellTracker = DwellTracker(thresholdSeconds: 0.1)
     private var edgeZones: [EdgeZone] = []
     private(set) var isRunning = false
 
@@ -102,13 +102,33 @@ final class EventTapLayer {
 
         dwellTracker.update(inZone: hitZone != nil)
 
-        if dwellTracker.isSuppressing {
-            Log.eventTap.debug("Suppressing edge push at (\(location.x), \(location.y))")
+        if dwellTracker.isSuppressing, let zone = hitZone {
+            let warpPoint = EventTapLayer.warpTarget(from: location, zone: zone)
+            CGWarpMouseCursorPosition(warpPoint)
+            event.location = warpPoint
+            Log.eventTap.debug("Warped cursor from edge (\(location.x), \(location.y)) → (\(warpPoint.x), \(warpPoint.y))")
             onMigrationBlocked?()
-            return nil
+            return Unmanaged.passRetained(event)
         }
 
         return Unmanaged.passRetained(event)
+    }
+
+    static func warpTarget(from point: CGPoint, zone: EdgeZone) -> CGPoint {
+        let pushBack: CGFloat = 6.0
+        var target = point
+        let r = zone.rect
+        if r.width > r.height {
+            target.y = r.origin.y - pushBack
+        } else {
+            let zoneMidX = r.origin.x + r.width / 2
+            if point.x >= zoneMidX {
+                target.x = r.origin.x - pushBack
+            } else {
+                target.x = r.origin.x + r.width + pushBack
+            }
+        }
+        return target
     }
 
     static func zoneContaining(point: CGPoint, in zones: [EdgeZone]) -> EdgeZone? {

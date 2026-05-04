@@ -86,7 +86,7 @@ final class DisplayManager {
         edgeZones = DisplayManager.edgeZones(
             for: screens,
             dockPosition: dockPosition,
-            edgeThreshold: 4.0
+            edgeThreshold: 8.0
         )
         Log.display.info("Refreshed screens: \(self.screens.count) displays, primary=\(mainID), dock=\(self.dockPosition.rawValue), zones=\(self.edgeZones.count)")
     }
