@@ -25,13 +25,15 @@ final class StatusBarController {
         guard let button = statusItem?.button else { return }
         switch state {
         case .active:
-            button.image = makeBeagleIcon(filled: true)
-            button.image?.accessibilityDescription = "ubu — active"
+            button.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "ubu — active")
+                ?? makeTextIcon("U")
+            button.image?.isTemplate = true
             button.appearsDisabled = false
             button.contentTintColor = nil
         case .paused:
-            button.image = makeBeagleIcon(filled: false)
-            button.image?.accessibilityDescription = "ubu — paused"
+            button.image = NSImage(systemSymbolName: "pawprint", accessibilityDescription: "ubu — paused")
+                ?? makeTextIcon("U")
+            button.image?.isTemplate = true
             button.appearsDisabled = true
             button.contentTintColor = nil
         case .warning:
@@ -65,6 +67,10 @@ final class StatusBarController {
         menu.addItem(loginItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates(_:)), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
 
         let aboutItem = NSMenuItem(title: "About ubu", action: #selector(showAbout(_:)), keyEquivalent: "")
         aboutItem.target = self
@@ -100,10 +106,14 @@ final class StatusBarController {
         sender.state = newState ? .on : .off
     }
 
+    @objc private func checkForUpdates(_ sender: NSMenuItem) {
+        UpdateChecker.checkInBackground(silent: false)
+    }
+
     @objc private func showAbout(_ sender: NSMenuItem) {
         let alert = NSAlert()
         alert.messageText = "ubu"
-        alert.informativeText = "Keeps your Dock on your primary display.\n\nVersion 1.0.0\nMIT License"
+        alert.informativeText = "Keeps your Dock on your primary display.\n\nVersion \(UpdateChecker.currentVersion)\nMIT License"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()
@@ -115,71 +125,44 @@ final class StatusBarController {
     }
 
     private func makeBeagleIcon(filled: Bool) -> NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: false) { rect in
-            let path = NSBezierPath()
-
-            // Beagle profile facing right — drawn in 18x18 canvas
-            // Body
-            path.move(to: NSPoint(x: 3, y: 4))
-            path.curve(to: NSPoint(x: 5, y: 2.5),
-                       controlPoint1: NSPoint(x: 3, y: 3),
-                       controlPoint2: NSPoint(x: 4, y: 2.5))
-            // Belly to rear legs
-            path.curve(to: NSPoint(x: 12, y: 2.5),
-                       controlPoint1: NSPoint(x: 7, y: 2),
-                       controlPoint2: NSPoint(x: 10, y: 2))
-            // Rear leg
-            path.line(to: NSPoint(x: 12, y: 1))
-            path.line(to: NSPoint(x: 13.5, y: 1))
-            path.line(to: NSPoint(x: 13.5, y: 3))
-            // Tail (up, slight curve — beagle characteristic)
-            path.curve(to: NSPoint(x: 15, y: 8),
-                       controlPoint1: NSPoint(x: 14.5, y: 4),
-                       controlPoint2: NSPoint(x: 15, y: 6))
-            path.curve(to: NSPoint(x: 14.5, y: 10),
-                       controlPoint1: NSPoint(x: 15, y: 9),
-                       controlPoint2: NSPoint(x: 14.8, y: 9.5))
-            // Back
-            path.curve(to: NSPoint(x: 10, y: 12),
-                       controlPoint1: NSPoint(x: 13.5, y: 11),
-                       controlPoint2: NSPoint(x: 12, y: 12))
-            // Head (rounder, beagle-like)
-            path.curve(to: NSPoint(x: 6, y: 14),
-                       controlPoint1: NSPoint(x: 8.5, y: 12.5),
-                       controlPoint2: NSPoint(x: 7, y: 14))
-            // Muzzle (longer, square — beagle trait)
-            path.curve(to: NSPoint(x: 2, y: 12),
-                       controlPoint1: NSPoint(x: 4.5, y: 14),
-                       controlPoint2: NSPoint(x: 2.5, y: 13.5))
-            path.line(to: NSPoint(x: 1.5, y: 11))
-            // Floppy ear (signature beagle feature — hangs down)
-            path.curve(to: NSPoint(x: 2, y: 7),
-                       controlPoint1: NSPoint(x: 0.5, y: 10),
-                       controlPoint2: NSPoint(x: 0.5, y: 8))
-            path.curve(to: NSPoint(x: 4, y: 6),
-                       controlPoint1: NSPoint(x: 2.5, y: 6.5),
-                       controlPoint2: NSPoint(x: 3, y: 6))
-            // Front chest down to front leg
-            path.curve(to: NSPoint(x: 5, y: 3.5),
-                       controlPoint1: NSPoint(x: 4.5, y: 5),
-                       controlPoint2: NSPoint(x: 5, y: 4))
-            // Front leg
-            path.line(to: NSPoint(x: 5, y: 1))
-            path.line(to: NSPoint(x: 6.5, y: 1))
-            path.line(to: NSPoint(x: 6.5, y: 3))
-            path.curve(to: NSPoint(x: 3, y: 4),
-                       controlPoint1: NSPoint(x: 5.5, y: 3),
-                       controlPoint2: NSPoint(x: 4, y: 3.5))
-            path.close()
-
+        let s = NSSize(width: 18, height: 18)
+        let image = NSImage(size: s, flipped: false) { _ in
             NSColor.black.setFill()
             NSColor.black.setStroke()
+
+            // Heart-shaped main pad
+            let pad = NSBezierPath()
+            pad.move(to: NSPoint(x: 9, y: 3))
+            pad.curve(to: NSPoint(x: 4, y: 7),
+                      controlPoint1: NSPoint(x: 6.5, y: 3),
+                      controlPoint2: NSPoint(x: 4, y: 4.5))
+            pad.curve(to: NSPoint(x: 9, y: 12),
+                      controlPoint1: NSPoint(x: 4, y: 9.5),
+                      controlPoint2: NSPoint(x: 6.5, y: 12))
+            pad.curve(to: NSPoint(x: 14, y: 7),
+                      controlPoint1: NSPoint(x: 11.5, y: 12),
+                      controlPoint2: NSPoint(x: 14, y: 9.5))
+            pad.curve(to: NSPoint(x: 9, y: 3),
+                      controlPoint1: NSPoint(x: 14, y: 4.5),
+                      controlPoint2: NSPoint(x: 11.5, y: 3))
+            pad.close()
+
+            // Four round toe beans — spaced in arc above pad
+            let toe1 = NSBezierPath(ovalIn: NSRect(x: 1.5, y: 12, width: 3, height: 3.5))
+            let toe2 = NSBezierPath(ovalIn: NSRect(x: 5, y: 14, width: 2.5, height: 3))
+            let toe3 = NSBezierPath(ovalIn: NSRect(x: 10.5, y: 14, width: 2.5, height: 3))
+            let toe4 = NSBezierPath(ovalIn: NSRect(x: 13.5, y: 12, width: 3, height: 3.5))
+
             if filled {
-                path.fill()
+                pad.fill()
+                toe1.fill(); toe2.fill(); toe3.fill(); toe4.fill()
             } else {
-                path.lineWidth = 1.2
-                path.stroke()
+                pad.lineWidth = 1.3
+                pad.stroke()
+                for toe in [toe1, toe2, toe3, toe4] {
+                    toe.lineWidth = 1.2
+                    toe.stroke()
+                }
             }
             return true
         }

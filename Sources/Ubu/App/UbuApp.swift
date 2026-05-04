@@ -53,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         LoginItemManager().setEnabled(true)
+
+        UpdateChecker.checkInBackground(silent: true)
     }
 
     private func startMonitoring() {
@@ -77,6 +79,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func sendNotification(title: String, body: String) {
+        guard Bundle.main.bundleIdentifier != nil else {
+            Log.app.info("Skipping notification (no bundle context): \(body)")
+            return
+        }
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert]) { granted, _ in
             guard granted else { return }

@@ -24,6 +24,7 @@ mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/Resources"
 
 cp "$BUILD_DIR/ubu" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 cp "$PROJECT_ROOT/Resources/Info.plist" "$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
+cp "$PROJECT_ROOT/Resources/AppIcon.icns" "$STAGING_DIR/$APP_NAME.app/Contents/Resources/AppIcon.icns"
 
 # Create DMG
 echo "Creating DMG..."
