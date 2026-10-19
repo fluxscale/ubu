@@ -54,8 +54,8 @@ export ASC_KEY_ID=<key id>
 export ASC_ISSUER_ID=<issuer id shown above the keys table>
 ```
 
-## 8. A sandbox tester
-Users and Access → Sandbox → Test Accounts → **+**. You'll use this to buy the subscription in TestFlight without being charged.
+## 8. Testing purchases
+No sandbox tester is needed: TestFlight builds use your real Apple ID, and subscription purchases there are automatically sandboxed (no charge). Sandbox test accounts (Users and Access → Sandbox) are only for local StoreKit testing outside TestFlight.
 
 ## 9. Screenshots and demo video
 - At least one Mac screenshot at 2880×1800, 2560×1600, 1440×900 or 1280×800. Show the menu bar menu open over a two-display desktop.
@@ -70,7 +70,7 @@ UPLOAD=1 Distribution/AppStore/build-appstore.sh 1.1.0  # build, sign, validate,
 Without `UPLOAD=1`, drag `ubu-appstore.pkg` into Transporter instead.
 
 Then in App Store Connect:
-1. **TestFlight:** install the build on your Mac, sign in with the sandbox tester, and confirm the free trial unlocks ubu, Restore Purchases works, and Pause/Resume works.
+1. **TestFlight:** install the build on your Mac, buy the subscription (sandboxed automatically, no charge), and confirm the free trial unlocks ubu, Restore Purchases works, and Pause/Resume works.
 2. **App Store tab:** fill in the listing from [LISTING.md](LISTING.md), attach the subscription to the version, answer App Privacy with **Data Not Collected**, paste the review notes and attach the video.
 3. Submit for review.
 
