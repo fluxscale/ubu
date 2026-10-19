@@ -10,6 +10,7 @@ Copy-paste values for App Store Connect. Character limits are checked by
 | Name | ubu: Dock Lock |
 | Subtitle | Keep the Dock on one display |
 | Bundle ID | com.fluxscale.ubu |
+| Apple ID (App Store Connect) | 6824554076 |
 | SKU | ubu-mac |
 | Primary category | Utilities |
 | Secondary category | Productivity |
