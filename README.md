@@ -75,7 +75,7 @@ ubu collects nothing. See [PRIVACY.md](PRIVACY.md).
 
 <h2>App Store edition</h2>
 
-A sandboxed Mac App Store build ($0.99/year) is built from the same source with `-DAPP_STORE`. Setup and release steps: [Distribution/AppStore/README.md](Distribution/AppStore/README.md).
+A sandboxed Mac App Store build ($4.99/year) is built from the same source with `-DAPP_STORE`. Setup and release steps: [Distribution/AppStore/README.md](Distribution/AppStore/README.md).
 
 <h2>Updates</h2>
 
