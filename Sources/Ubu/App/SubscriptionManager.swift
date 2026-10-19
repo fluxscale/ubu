@@ -11,6 +11,7 @@ final class SubscriptionManager {
     private(set) var isSubscribed = false
     private(set) var product: Product?
     private(set) var isEligibleForTrial = false
+    private var productLoadError: Error?
 
     /// Called after every entitlement check, so the first call carries the initial state.
     var onChange: (() -> Void)?
@@ -42,7 +43,16 @@ final class SubscriptionManager {
         isSubscribed = active
 
         if product == nil {
-            product = try? await Product.products(for: [Self.productID]).first
+            do {
+                product = try await Product.products(for: [Self.productID]).first
+                productLoadError = nil
+                if product == nil {
+                    Log.app.error("App Store returned no product for \(Self.productID, privacy: .public)")
+                }
+            } catch {
+                productLoadError = error
+                Log.app.error("Product lookup failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
         isEligibleForTrial = await product?.subscription?.isEligibleForIntroOffer ?? false
         onChange?()
@@ -58,7 +68,14 @@ final class SubscriptionManager {
     func purchase() async {
         if product == nil { await refresh() }
         guard let product else {
-            showAlert("Couldn't Reach the App Store", "Check your connection and try again.")
+            if let productLoadError {
+                showAlert("Couldn't Reach the App Store", productLoadError.localizedDescription)
+            } else {
+                // Reached the store, but it has nothing to sell: the product isn't live for this
+                // build yet (agreements, metadata, or propagation), not a connection problem.
+                showAlert("Subscription Not Available Yet",
+                          "The App Store didn't return ubu's subscription. Please try again later.")
+            }
             return
         }
         do {
