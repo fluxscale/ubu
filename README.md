@@ -14,10 +14,7 @@ macOS moves your Dock to whichever screen you push your cursor against the botto
 
 Grab the latest `.dmg` from [Releases](https://github.com/fluxscale/ubu/releases), open it, and drag `ubu.app` to Applications.
 
-> **Note:** macOS may block unsigned apps. If you see "damaged and can't be opened", run:
-> ```bash
-> xattr -cr /Applications/ubu.app
-> ```
+Signed and notarized by Apple — no Gatekeeper warnings.
 
 <h3>Build from source</h3>
 

@@ -9,6 +9,10 @@ DMG_NAME="ubu.dmg"
 STAGING_DIR="$PROJECT_ROOT/.build/dmg-staging"
 VERSION="${1:-1.0.0}"
 
+# Signing config. Set SIGN_IDENTITY="" to skip signing/notarization.
+SIGN_IDENTITY="${SIGN_IDENTITY-Developer ID Application: FLUXSCALE LIMITED (Z36JCF24WU)}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-ubu-notary}"
+
 echo "=== Building ubu v${VERSION} ==="
 
 # Build universal binary
@@ -24,7 +28,23 @@ mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/Resources"
 
 cp "$BUILD_DIR/ubu" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 cp "$PROJECT_ROOT/Resources/Info.plist" "$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
+
+# Stamp version into the bundle so it matches the release tag
+PLIST="$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$PLIST"
+
 cp "$PROJECT_ROOT/Resources/AppIcon.icns" "$STAGING_DIR/$APP_NAME.app/Contents/Resources/AppIcon.icns"
+
+# Sign the app with hardened runtime (required for notarization)
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "Signing app..."
+    codesign --force --deep --options runtime --timestamp \
+        --entitlements "$PROJECT_ROOT/Resources/ubu.entitlements" \
+        --sign "$SIGN_IDENTITY" \
+        "$STAGING_DIR/$APP_NAME.app"
+    codesign --verify --strict --verbose=2 "$STAGING_DIR/$APP_NAME.app"
+fi
 
 # Add Applications symlink for drag-to-install
 ln -s /Applications "$STAGING_DIR/Applications"
@@ -77,6 +97,21 @@ hdiutil detach "$MOUNT_DIR" -quiet
 # Convert to compressed read-only DMG
 hdiutil convert "$TEMP_DMG" -format UDZO -imagekey zlib-level=9 -o "$PROJECT_ROOT/$DMG_NAME"
 rm -f "$TEMP_DMG"
+
+# Sign, notarize, and staple the DMG
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "Signing DMG..."
+    codesign --force --sign "$SIGN_IDENTITY" --timestamp "$PROJECT_ROOT/$DMG_NAME"
+
+    echo "Notarizing (this takes a few minutes)..."
+    xcrun notarytool submit "$PROJECT_ROOT/$DMG_NAME" \
+        --keychain-profile "$NOTARY_PROFILE" \
+        --wait
+
+    echo "Stapling ticket..."
+    xcrun stapler staple "$PROJECT_ROOT/$DMG_NAME"
+    xcrun stapler validate "$PROJECT_ROOT/$DMG_NAME"
+fi
 
 echo "=== DMG created: $PROJECT_ROOT/$DMG_NAME ==="
 
