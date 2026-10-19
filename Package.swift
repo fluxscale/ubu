@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 import PackageDescription
 
 let package = Package(
@@ -9,11 +9,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "ubu",
-            dependencies: [],
-            path: "Sources/Ubu",
-            resources: [
-                .process("../../Resources")
-            ]
+            path: "Sources/Ubu"
         ),
         .testTarget(
             name: "UbuTests",

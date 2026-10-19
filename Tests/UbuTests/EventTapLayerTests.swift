@@ -50,42 +50,41 @@ final class EventTapLayerTests: XCTestCase {
     }
 
     func testPointHitsEdgeZone() {
-        let zones = [
-            EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 1920, height: 2.0))
-        ]
-        let result = EventTapLayer.zoneContaining(point: CGPoint(x: 3000, y: 1.0), in: zones)
-        XCTAssertEqual(result?.displayID, 2)
+        let zones = [EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 1920, height: 2), dockPosition: .bottom)]
+        XCTAssertEqual(EventTapLayer.zoneContaining(point: CGPoint(x: 3000, y: 1), in: zones)?.displayID, 2)
     }
 
     func testPointMissesAllZones() {
-        let zones = [
-            EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 1920, height: 2.0))
-        ]
-        let result = EventTapLayer.zoneContaining(point: CGPoint(x: 3000, y: 100.0), in: zones)
-        XCTAssertNil(result)
+        let zones = [EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 1920, height: 2), dockPosition: .bottom)]
+        XCTAssertNil(EventTapLayer.zoneContaining(point: CGPoint(x: 3000, y: 100), in: zones))
     }
 
     func testWarpTargetBottomEdge() {
-        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 1072, width: 1920, height: 8))
-        let point = CGPoint(x: 3000, y: 1075)
-        let target = EventTapLayer.warpTarget(from: point, zone: zone)
-        XCTAssertEqual(target.x, 3000, accuracy: 0.01)
-        XCTAssertEqual(target.y, 1072 - 6.0, accuracy: 0.01)
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 1072, width: 1920, height: 8), dockPosition: .bottom)
+        XCTAssertEqual(EventTapLayer.warpTarget(from: CGPoint(x: 3000, y: 1075), zone: zone), CGPoint(x: 3000, y: 1066))
     }
 
-    func testWarpTargetLeftEdge() {
-        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 2560, y: 0, width: 8, height: 1080))
-        let point = CGPoint(x: 2562, y: 500)
-        let target = EventTapLayer.warpTarget(from: point, zone: zone)
-        XCTAssertEqual(target.x, 2560 + 8 + 6.0, accuracy: 0.01)
-        XCTAssertEqual(target.y, 500, accuracy: 0.01)
+    func testWarpTargetLeftDockPushesRightWhereverCursorIsInBand() {
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: -1920, y: 0, width: 8, height: 1080), dockPosition: .left)
+        for x: CGFloat in [-1920, -1917, -1913] {
+            XCTAssertEqual(EventTapLayer.warpTarget(from: CGPoint(x: x, y: 500), zone: zone), CGPoint(x: -1906, y: 500))
+        }
     }
 
-    func testWarpTargetRightEdge() {
-        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 4472, y: 0, width: 8, height: 1080))
-        let point = CGPoint(x: 4477, y: 500)
-        let target = EventTapLayer.warpTarget(from: point, zone: zone)
-        XCTAssertEqual(target.x, 4472 - 6.0, accuracy: 0.01)
-        XCTAssertEqual(target.y, 500, accuracy: 0.01)
+    func testWarpTargetRightDockNeverLeavesDisplay() {
+        // Display spans x 2560..4480. Old midpoint logic sent the left half of the band to x=4486.
+        let zone = EdgeZone(displayID: 2, rect: CGRect(x: 4472, y: 0, width: 8, height: 1080), dockPosition: .right)
+        for x: CGFloat in [4472, 4474, 4479] {
+            let target = EventTapLayer.warpTarget(from: CGPoint(x: x, y: 500), zone: zone)
+            XCTAssertEqual(target, CGPoint(x: 4466, y: 500))
+            XCTAssertLessThan(target.x, 4480)
+        }
+    }
+
+    func testEventMaskIncludesMovesAndDrags() {
+        for type in [CGEventType.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged] {
+            XCTAssertNotEqual(EventTapLayer.eventMask & (1 << type.rawValue), 0, "\(type)")
+        }
+        XCTAssertEqual(EventTapLayer.eventMask & (1 << CGEventType.leftMouseDown.rawValue), 0)
     }
 }

@@ -28,7 +28,7 @@ swift build -c release
 <h3>Create DMG</h3>
 
 ```bash
-Distribution/DMG/create-dmg.sh 1.0.0
+Distribution/DMG/create-dmg.sh 1.1.0
 ```
 
 <h2>Setup</h2>
@@ -37,19 +37,20 @@ Distribution/DMG/create-dmg.sh 1.0.0
 2. Grant Accessibility permission when prompted (System Settings > Privacy & Security > Accessibility)
 3. Done. Your Dock stays put.
 
-ubu starts at login automatically. Toggle this from the menubar menu.
+ubu adds itself to your login items on first launch. Turn that off from the menubar menu and it stays off.
 
 <h2>How it works</h2>
 
-ubu uses three layers of defense:
+ubu uses two layers:
 
 | Layer | Mechanism | Role |
 |-------|-----------|------|
-| **Event Tap** | Intercepts mouse events at screen edges, warps cursor back | Prevents migration before it happens |
-| **CoreDock** | Private framework via `dlopen` | Instant Dock repositioning if migration occurs |
-| **Accessibility** | AX polling with burst mode on display changes | Safety net — catches anything the other layers miss |
+| **Event tap** | Watches pointer moves and drags. When the pointer rests against the Dock edge of a secondary display for 0.1s, ubu nudges it 6pt back onto that display | Stops the Dock from moving |
+| **Dock watcher** | Polls which display the Dock is on (from its window-list entry). If it landed on the wrong one, ubu pushes the pointer against the primary display's Dock edge, the same gesture you'd use by hand | Puts the Dock back when it moves anyway (fast flicks, sleep/wake, display changes) |
 
-All three layers use CG coordinates (`CGDisplayBounds`, `CGMainDisplayID`) for consistent screen geometry across the entire pipeline.
+Edges where another display continues are left unguarded, so the pointer crosses between monitors freely. Corrections are capped at three attempts, three seconds apart, and never interrupt a drag.
+
+No private APIs, no Dock restarts.
 
 <h2>Menubar</h2>
 
@@ -66,6 +67,7 @@ Menu options: Pause/Resume, Start at Login, Check for Updates, Quit.
 - macOS 13.0 (Ventura) or later
 - Accessibility permission
 - Works with any number of displays and all Dock positions (bottom, left, right)
+- The Dock is hidden in full-screen apps by macOS; ubu leaves those Spaces alone
 
 <h2>Updates</h2>
 
@@ -78,13 +80,14 @@ Sources/Ubu/
 ├── App/
 │   ├── UbuApp.swift              # Entry point, lifecycle
 │   ├── StatusBarController.swift # Menubar UI
-│   └── PermissionManager.swift   # AX permission handling
+│   └── PermissionManager.swift   # Accessibility permission
 ├── Core/
-│   ├── DisplayManager.swift      # Screen detection, edge zones
-│   ├── EventTapLayer.swift       # Layer 1: cursor interception
-│   ├── CoreDockBridge.swift      # Layer 2: private API bridge
-│   ├── DockMonitor.swift         # Coordinator for all layers
-│   └── AccessibilityLayer.swift  # Layer 3: AX polling
+│   ├── DisplayManager.swift      # Displays, Dock side, edge zones
+│   ├── EventTapLayer.swift       # Layer 1: keeps the pointer off guarded edges
+│   ├── DockWatcher.swift         # Layer 2: notices the Dock on the wrong display
+│   ├── DockLocator.swift         # Finds the Dock's display via CGWindowList
+│   ├── DockMover.swift           # Moves the Dock with a pointer push
+│   └── DockMonitor.swift         # Wires the layers together
 └── Utilities/
     ├── Logger.swift              # os_log wrapper
     ├── LoginItemManager.swift    # SMAppService wrapper

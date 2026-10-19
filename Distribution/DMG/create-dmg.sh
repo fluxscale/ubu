@@ -3,7 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-BUILD_DIR="$PROJECT_ROOT/.build/release"
 APP_NAME="ubu"
 DMG_NAME="ubu.dmg"
 STAGING_DIR="$PROJECT_ROOT/.build/dmg-staging"
@@ -20,13 +19,26 @@ echo "Building universal binary..."
 cd "$PROJECT_ROOT"
 swift build -c release --arch arm64 --arch x86_64
 
+# Multi-arch builds land in .build/apple/..., not .build/release. Ask SwiftPM rather
+# than guess: guessing shipped a stale arm64-only binary in v1.0.1 and v1.0.2.
+BINARY="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/ubu"
+ARCHS="$(lipo -archs "$BINARY")"
+if [[ "$ARCHS" != *arm64* || "$ARCHS" != *x86_64* ]]; then
+    echo "error: $BINARY is not universal (archs: $ARCHS)" >&2
+    exit 1
+fi
+if [[ -n "$(find "$PROJECT_ROOT/Sources" -name '*.swift' -newer "$BINARY")" ]]; then
+    echo "error: $BINARY is older than the sources" >&2
+    exit 1
+fi
+
 # Create .app bundle
 echo "Creating app bundle..."
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/MacOS"
 mkdir -p "$STAGING_DIR/$APP_NAME.app/Contents/Resources"
 
-cp "$BUILD_DIR/ubu" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
+cp "$BINARY" "$STAGING_DIR/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 cp "$PROJECT_ROOT/Resources/Info.plist" "$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
 
 # Stamp version into the bundle so it matches the release tag
@@ -40,7 +52,6 @@ cp "$PROJECT_ROOT/Resources/AppIcon.icns" "$STAGING_DIR/$APP_NAME.app/Contents/R
 if [ -n "$SIGN_IDENTITY" ]; then
     echo "Signing app..."
     codesign --force --deep --options runtime --timestamp \
-        --entitlements "$PROJECT_ROOT/Resources/ubu.entitlements" \
         --sign "$SIGN_IDENTITY" \
         "$STAGING_DIR/$APP_NAME.app"
     codesign --verify --strict --verbose=2 "$STAGING_DIR/$APP_NAME.app"

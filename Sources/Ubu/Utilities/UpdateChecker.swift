@@ -1,80 +1,70 @@
 import AppKit
 
-final class UpdateChecker {
-    private static let repo = "fluxscale/ubu"
-    private static let releasesURL = "https://api.github.com/repos/\(repo)/releases/latest"
+@MainActor
+enum UpdateChecker {
+    private static let releasesURL = URL(string: "https://api.github.com/repos/fluxscale/ubu/releases/latest")!
+
+    private struct Release: Decodable {
+        let tagName: String
+        let htmlUrl: URL
+    }
 
     static var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
     }
 
+    /// `silent` (launch check) only speaks up when an update exists. A manual check
+    /// always answers, including when GitHub can't be reached.
     static func checkInBackground(silent: Bool = true) {
-        DispatchQueue.global(qos: .utility).async {
-            guard let (tag, url) = fetchLatestRelease() else { return }
-            let latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        Task {
+            guard let release = await fetchLatestRelease() else {
+                if !silent { showAlert("Couldn't Check for Updates", "GitHub could not be reached. Try again later.") }
+                return
+            }
+            let latest = release.tagName.hasPrefix("v") ? String(release.tagName.dropFirst()) : release.tagName
             if compareVersions(latest, isNewerThan: currentVersion) {
-                DispatchQueue.main.async {
-                    showUpdateAlert(version: latest, downloadURL: url)
-                }
+                showUpdateAlert(version: latest, downloadURL: release.htmlUrl)
             } else if !silent {
-                DispatchQueue.main.async { showUpToDateAlert() }
+                showAlert("You're Up to Date", "ubu v\(currentVersion) is the latest version.")
             }
         }
     }
 
-    private static func fetchLatestRelease() -> (tag: String, url: String)? {
-        guard let url = URL(string: releasesURL) else { return nil }
-        var request = URLRequest(url: url)
+    private static func fetchLatestRelease() async -> Release? {
+        var request = URLRequest(url: releasesURL, timeoutInterval: 10)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var result: (String, String)?
-
-        URLSession.shared.dataTask(with: request) { data, _, error in
-            defer { semaphore.signal() }
-            guard error == nil, let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let tag = json["tag_name"] as? String,
-                  let htmlURL = json["html_url"] as? String else { return }
-            result = (tag, htmlURL)
-        }.resume()
-
-        semaphore.wait()
-        return result
+        guard let (data, _) = try? await URLSession.shared.data(for: request) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try? decoder.decode(Release.self, from: data)
     }
 
-    static func compareVersions(_ remote: String, isNewerThan local: String) -> Bool {
+    nonisolated static func compareVersions(_ remote: String, isNewerThan local: String) -> Bool {
         let r = remote.split(separator: ".").compactMap { Int($0) }
         let l = local.split(separator: ".").compactMap { Int($0) }
         for i in 0..<max(r.count, l.count) {
             let rv = i < r.count ? r[i] : 0
             let lv = i < l.count ? l[i] : 0
-            if rv > lv { return true }
-            if rv < lv { return false }
+            if rv != lv { return rv > lv }
         }
         return false
     }
 
-    private static func showUpdateAlert(version: String, downloadURL: String) {
+    private static func showUpdateAlert(version: String, downloadURL: URL) {
         let alert = NSAlert()
         alert.messageText = "ubu v\(version) Available"
         alert.informativeText = "A new version of ubu is available. You are running v\(currentVersion)."
-        alert.alertStyle = .informational
         alert.addButton(withTitle: "Download")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn {
-            if let url = URL(string: downloadURL) {
-                NSWorkspace.shared.open(url)
-            }
+            NSWorkspace.shared.open(downloadURL)
         }
     }
 
-    private static func showUpToDateAlert() {
+    private static func showAlert(_ title: String, _ message: String) {
         let alert = NSAlert()
-        alert.messageText = "You're Up to Date"
-        alert.informativeText = "ubu v\(currentVersion) is the latest version."
-        alert.alertStyle = .informational
+        alert.messageText = title
+        alert.informativeText = message
         alert.addButton(withTitle: "OK")
         alert.runModal()
     }

@@ -1,9 +1,10 @@
 import XCTest
 @testable import ubu
 
+@MainActor
 final class DockMonitorTests: XCTestCase {
 
-    func testMonitorStartsAllLayers() {
+    func testMonitorStartsAndStops() {
         let monitor = DockMonitor()
         monitor.start()
         XCTAssertTrue(monitor.isRunning)
@@ -11,19 +12,11 @@ final class DockMonitorTests: XCTestCase {
         XCTAssertFalse(monitor.isRunning)
     }
 
-    func testMonitorReportsLayerStatus() {
-        let monitor = DockMonitor()
-        let status = monitor.layerStatus
-        XCTAssertEqual(status.count, 3)
-        XCTAssertEqual(status[0].name, "EventTap")
-        XCTAssertEqual(status[1].name, "CoreDock")
-        XCTAssertEqual(status[2].name, "Accessibility")
-    }
-
     func testMonitorHandlesMultipleStartStopCycles() {
         let monitor = DockMonitor()
         for _ in 0..<5 {
             monitor.start()
+            monitor.start() // second start is a no-op, not a second tap
             monitor.stop()
         }
         XCTAssertFalse(monitor.isRunning)

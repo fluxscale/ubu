@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 final class StatusBarController {
     enum IconState {
         case active
@@ -122,52 +123,6 @@ final class StatusBarController {
     @objc private func quit(_ sender: NSMenuItem) {
         onQuit?()
         NSApp.terminate(nil)
-    }
-
-    private func makeBeagleIcon(filled: Bool) -> NSImage {
-        let s = NSSize(width: 18, height: 18)
-        let image = NSImage(size: s, flipped: false) { _ in
-            NSColor.black.setFill()
-            NSColor.black.setStroke()
-
-            // Heart-shaped main pad
-            let pad = NSBezierPath()
-            pad.move(to: NSPoint(x: 9, y: 3))
-            pad.curve(to: NSPoint(x: 4, y: 7),
-                      controlPoint1: NSPoint(x: 6.5, y: 3),
-                      controlPoint2: NSPoint(x: 4, y: 4.5))
-            pad.curve(to: NSPoint(x: 9, y: 12),
-                      controlPoint1: NSPoint(x: 4, y: 9.5),
-                      controlPoint2: NSPoint(x: 6.5, y: 12))
-            pad.curve(to: NSPoint(x: 14, y: 7),
-                      controlPoint1: NSPoint(x: 11.5, y: 12),
-                      controlPoint2: NSPoint(x: 14, y: 9.5))
-            pad.curve(to: NSPoint(x: 9, y: 3),
-                      controlPoint1: NSPoint(x: 14, y: 4.5),
-                      controlPoint2: NSPoint(x: 11.5, y: 3))
-            pad.close()
-
-            // Four round toe beans — spaced in arc above pad
-            let toe1 = NSBezierPath(ovalIn: NSRect(x: 1.5, y: 12, width: 3, height: 3.5))
-            let toe2 = NSBezierPath(ovalIn: NSRect(x: 5, y: 14, width: 2.5, height: 3))
-            let toe3 = NSBezierPath(ovalIn: NSRect(x: 10.5, y: 14, width: 2.5, height: 3))
-            let toe4 = NSBezierPath(ovalIn: NSRect(x: 13.5, y: 12, width: 3, height: 3.5))
-
-            if filled {
-                pad.fill()
-                toe1.fill(); toe2.fill(); toe3.fill(); toe4.fill()
-            } else {
-                pad.lineWidth = 1.3
-                pad.stroke()
-                for toe in [toe1, toe2, toe3, toe4] {
-                    toe.lineWidth = 1.2
-                    toe.stroke()
-                }
-            }
-            return true
-        }
-        image.isTemplate = true
-        return image
     }
 
     private func makeTextIcon(_ text: String) -> NSImage {

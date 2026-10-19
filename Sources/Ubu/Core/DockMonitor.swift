@@ -1,81 +1,58 @@
 import AppKit
 
-struct LayerStatus {
-    let name: String
-    let isActive: Bool
-}
-
+/// Two layers: the event tap stops the Dock from moving, and the watcher puts it
+/// back on the primary display if it moves anyway.
+@MainActor
 final class DockMonitor {
     private let displayManager = DisplayManager()
     private let eventTapLayer = EventTapLayer()
-    private let coreDockBridge = CoreDockBridge()
-    private lazy var accessibilityLayer = AccessibilityLayer(displayManager: displayManager)
+    private lazy var watcher = DockWatcher(displayManager: displayManager)
 
     private(set) var isRunning = false
-    private var sleepObserver: NSObjectProtocol?
-    private var wakeObserver: NSObjectProtocol?
+    private var workspaceObservers: [NSObjectProtocol] = []
     private var migrationBlockedCount = 0
 
     var onStateChanged: (() -> Void)?
     var onFirstMigrationBlocked: (() -> Void)?
 
-    var layerStatus: [LayerStatus] {
-        [
-            LayerStatus(name: "EventTap", isActive: eventTapLayer.isRunning),
-            LayerStatus(name: "CoreDock", isActive: coreDockBridge.isAvailable),
-            LayerStatus(name: "Accessibility", isActive: accessibilityLayer.isRunning),
-        ]
-    }
-
     func start() {
-        displayManager.start()
-        coreDockBridge.load()
+        guard !isRunning else { return }
 
         displayManager.onDisplaysChanged = { [weak self] in
             self?.handleDisplayChange()
         }
-
-        eventTapLayer.updateEdgeZones(displayManager.edgeZones)
-        let tapStarted = eventTapLayer.start()
+        displayManager.start()
 
         eventTapLayer.onMigrationBlocked = { [weak self] in
-            guard let self = self else { return }
+            guard let self else { return }
             self.migrationBlockedCount += 1
             if self.migrationBlockedCount == 1 {
                 self.onFirstMigrationBlocked?()
             }
         }
+        eventTapLayer.updateEdgeZones(displayManager.edgeZones)
+        let tapStarted = eventTapLayer.start()
 
-        accessibilityLayer.onDockOnWrongScreen = { [weak self] currentDisplay, primaryDisplay in
-            self?.handleDockMigration(from: currentDisplay, to: primaryDisplay)
+        watcher.onDockOnWrongScreen = { [weak self] in
+            self?.moveDockToPrimary()
         }
-        accessibilityLayer.start()
-
-        if tapStarted && coreDockBridge.isAvailable {
-            accessibilityLayer.setRelaxedPolling()
-        }
+        watcher.start()
 
         observeSleepWake()
 
         isRunning = true
         onStateChanged?()
-
-        Log.monitor.info("DockMonitor started — eventTap=\(tapStarted), coreDock=\(self.coreDockBridge.isAvailable)")
+        Log.monitor.info("DockMonitor started — eventTap=\(tapStarted)")
     }
 
     func stop() {
+        guard isRunning else { return }
         eventTapLayer.stop()
-        accessibilityLayer.stop()
+        watcher.stop()
         displayManager.stop()
 
-        if let obs = sleepObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(obs)
-        }
-        if let obs = wakeObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(obs)
-        }
-        sleepObserver = nil
-        wakeObserver = nil
+        workspaceObservers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
+        workspaceObservers = []
 
         isRunning = false
         onStateChanged?()
@@ -84,45 +61,36 @@ final class DockMonitor {
 
     private func handleDisplayChange() {
         eventTapLayer.updateEdgeZones(displayManager.edgeZones)
-        accessibilityLayer.triggerBurstPolling()
-        Log.monitor.info("Display config changed — edge zones rebuilt, burst polling active")
+        watcher.triggerBurstPolling()
+        Log.monitor.info("Display layout changed — edge zones rebuilt, burst polling active")
     }
 
-    private func handleDockMigration(from currentDisplay: CGDirectDisplayID, to primaryDisplay: CGDirectDisplayID) {
-        Log.monitor.info("Dock migration detected: \(currentDisplay) → correcting to \(primaryDisplay)")
-
-        if coreDockBridge.isAvailable {
-            let result = coreDockBridge.moveDockToDisplay(displayID: primaryDisplay)
-            if case .success = result {
-                return
-            }
-        }
-
-        AccessibilityLayer.forceDockToDisplay(primaryDisplay)
+    private func moveDockToPrimary() {
+        guard let primary = displayManager.primaryScreen else { return }
+        DockMover.push(to: primary.frame, dockPosition: displayManager.dockPosition)
     }
 
     private func observeSleepWake() {
         let center = NSWorkspace.shared.notificationCenter
 
-        sleepObserver = center.addObserver(
-            forName: NSWorkspace.willSleepNotification,
-            object: nil,
-            queue: .main
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.willSleepNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Log.monitor.info("System going to sleep")
-            self?.eventTapLayer.stop()
-        }
+            MainActor.assumeIsolated {
+                Log.monitor.info("System going to sleep")
+                self?.eventTapLayer.stop()
+            }
+        })
 
-        wakeObserver = center.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: .main
+        workspaceObservers.append(center.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Log.monitor.info("System woke up")
-            self?.displayManager.refreshScreens()
-            self?.eventTapLayer.updateEdgeZones(self?.displayManager.edgeZones ?? [])
-            _ = self?.eventTapLayer.start()
-            self?.accessibilityLayer.triggerBurstPolling()
-        }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Log.monitor.info("System woke up")
+                self.displayManager.refresh()
+                _ = self.eventTapLayer.start()
+            }
+        })
     }
 }

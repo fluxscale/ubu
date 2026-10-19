@@ -3,6 +3,7 @@ import UserNotifications
 
 @main
 struct UbuApp {
+    @MainActor
     static func main() {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
@@ -12,6 +13,7 @@ struct UbuApp {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let statusBar = StatusBarController()
     private let dockMonitor = DockMonitor()
@@ -37,35 +39,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.app.info("ubu shutting down")
         }
 
-        let permStatus = PermissionManager.checkAccessibility()
-        if permStatus == .granted {
+        if PermissionManager.isTrusted {
             startMonitoring()
         } else {
             statusBar.updateIcon(state: .warning)
             PermissionManager.requestAccessibility()
-            permissionTimer = PermissionManager.startMonitoringPermission { [weak self] status in
-                if status == .granted {
-                    self?.permissionTimer?.invalidate()
-                    self?.permissionTimer = nil
-                    self?.startMonitoring()
-                }
+            permissionTimer = PermissionManager.waitForAccessibility { [weak self] in
+                self?.permissionTimer = nil
+                self?.startMonitoring()
             }
         }
 
-        LoginItemManager().setEnabled(true)
+        LoginItemManager().registerOnFirstLaunch()
 
         UpdateChecker.checkInBackground(silent: true)
     }
 
     private func startMonitoring() {
         dockMonitor.onStateChanged = { [weak self] in
-            guard let self = self else { return }
-            let state: StatusBarController.IconState = self.dockMonitor.isRunning ? .active : .paused
-            self.statusBar.updateIcon(state: state)
+            guard let self else { return }
+            self.statusBar.updateIcon(state: self.dockMonitor.isRunning ? .active : .paused)
         }
 
         dockMonitor.onFirstMigrationBlocked = { [weak self] in
-            guard let self = self, !self.hasShownFirstBlockNotification else { return }
+            guard let self, !self.hasShownFirstBlockNotification else { return }
             self.hasShownFirstBlockNotification = true
             self.sendNotification(
                 title: "ubu",
@@ -83,18 +80,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Log.app.info("Skipping notification (no bundle context): \(body)")
             return
         }
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert]) { granted, _ in
-            guard granted else { return }
+        Task {
+            let center = UNUserNotificationCenter.current()
+            guard (try? await center.requestAuthorization(options: [.alert])) == true else { return }
             let content = UNMutableNotificationContent()
             content.title = title
             content.body = body
-            let request = UNNotificationRequest(
-                identifier: "ubu.first-block",
-                content: content,
-                trigger: nil
-            )
-            center.add(request)
+            try? await center.add(UNNotificationRequest(identifier: "ubu.first-block", content: content, trigger: nil))
         }
     }
 }
