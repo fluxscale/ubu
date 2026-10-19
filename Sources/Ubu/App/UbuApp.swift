@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.isPaused.toggle()
             self.apply()
         }
-        statusBar.onGrantPermission = { PermissionManager.requestAccessibility() }
+        statusBar.onGrantPermission = { PermissionManager.openAccessibilitySettings() }
         statusBar.onQuit = { [weak self] in
             self?.dockMonitor.stop()
             Log.app.info("ubu shutting down")
