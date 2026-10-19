@@ -6,7 +6,7 @@ The App Store edition is the same app, built with `-DAPP_STORE`:
 |---|---|---|
 | Bundle ID | `com.ubu.app` | `com.fluxscale.ubu` |
 | Sandboxed | No | Yes |
-| Price | Free | $4.99/year, 1-week free trial |
+| Price | Free | $1.99/year, 1-week free trial |
 | Updates | Built-in GitHub check | App Store |
 | Launch at login | On after first launch | Off until the user enables it |
 | Dock side | Read from Dock prefs | Inferred from screen layout (prefs are sandbox-blocked) |
@@ -18,7 +18,7 @@ Steps 1–8 are one-time setup and only the account holder can do them. After th
 ## 1. Agreements, tax and banking
 [App Store Connect → Business](https://appstoreconnect.apple.com/business): accept the **Paid Apps** agreement and complete tax and banking. Subscriptions can't be sold until this shows _Active_.
 
-Also apply to the [App Store Small Business Program](https://developer.apple.com/app-store/small-business-program/). Apple's commission drops from 30% to 15%, so a $4.99 subscription pays about $4.24 before tax.
+Also apply to the [App Store Small Business Program](https://developer.apple.com/app-store/small-business-program/). Apple's commission drops from 30% to 15%, so a $1.99 subscription pays about $1.69 before tax.
 
 ## 2. App ID
 [Certificates, Identifiers & Profiles → Identifiers → +](https://developer.apple.com/account/resources/identifiers/list) → App IDs → App:

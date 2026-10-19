@@ -19,7 +19,7 @@ VERSION="${1:?usage: build-appstore.sh <version> [build-number]}"
 BUILD_NUMBER="${2:-$(date +%Y%m%d%H%M)}" # App Store Connect needs a higher one on every upload
 TEAM_ID="${TEAM_ID:-Z36JCF24WU}"
 BUNDLE_ID="${BUNDLE_ID:-com.fluxscale.ubu}"
-APP_IDENTITY="${APP_IDENTITY-Apple Distribution: FLUXSCALE LIMITED ($TEAM_ID)}"
+APP_IDENTITY="${APP_IDENTITY-3rd Party Mac Developer Application: FLUXSCALE LIMITED ($TEAM_ID)}"
 INSTALLER_IDENTITY="${INSTALLER_IDENTITY-3rd Party Mac Developer Installer: FLUXSCALE LIMITED ($TEAM_ID)}"
 PROFILE="${PROFILE-$SCRIPT_DIR/ubu.provisionprofile}"
 

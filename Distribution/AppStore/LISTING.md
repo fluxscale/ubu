@@ -7,11 +7,11 @@ Copy-paste values for App Store Connect. Character limits are checked by
 
 | Field | Value |
 |---|---|
-| Name | ubu: Dock Lock |
+| Name | ubu: Dock Anchor |
 | Subtitle | Keep the Dock on one display |
 | Bundle ID | com.fluxscale.ubu |
 | Apple ID (App Store Connect) | 6824554076 |
-| SKU | ubu-mac |
+| SKU | ubu |
 | Primary category | Utilities |
 | Secondary category | Productivity |
 | Content rights | Does not contain third-party content |
@@ -50,7 +50,7 @@ PRIVATE BY DESIGN
 ubu collects nothing. No accounts, no analytics, no network requests of its own. It needs the Accessibility permission to see and move the pointer, and that information never leaves your Mac.
 
 SUBSCRIPTION
-ubu is $4.99 a year, with a free trial. Payment is charged to your Apple Account when you confirm the purchase. The subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel it in your App Store account settings.
+ubu is $1.99 a year, with a free trial. Payment is charged to your Apple Account when you confirm the purchase. The subscription renews automatically unless you cancel at least 24 hours before the end of the current period. Manage or cancel it in your App Store account settings.
 
 Terms of Use: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 Privacy Policy: https://github.com/fluxscale/ubu/blob/main/PRIVACY.md
@@ -76,7 +76,7 @@ First App Store release.
 | Reference name | ubu Yearly |
 | Product ID | com.fluxscale.ubu.yearly |
 | Duration | 1 year |
-| Price | $4.99 (USD base; let Apple set other storefronts) |
+| Price | $1.99 (USD base; let Apple set other storefronts) |
 | Introductory offer | Free, 1 week, new subscribers |
 | Display name | ubu Yearly |
 | Description | Keep your Dock on your main display. |
