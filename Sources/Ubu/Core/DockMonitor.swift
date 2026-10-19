@@ -12,7 +12,6 @@ final class DockMonitor {
     private var workspaceObservers: [NSObjectProtocol] = []
     private var migrationBlockedCount = 0
 
-    var onStateChanged: (() -> Void)?
     var onFirstMigrationBlocked: (() -> Void)?
 
     func start() {
@@ -41,7 +40,6 @@ final class DockMonitor {
         observeSleepWake()
 
         isRunning = true
-        onStateChanged?()
         Log.monitor.info("DockMonitor started — eventTap=\(tapStarted)")
     }
 
@@ -55,7 +53,6 @@ final class DockMonitor {
         workspaceObservers = []
 
         isRunning = false
-        onStateChanged?()
         Log.monitor.info("DockMonitor stopped")
     }
 

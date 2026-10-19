@@ -20,3 +20,6 @@ jobs:
 
       - name: Build Universal Binary
         run: swift build -c release --arch arm64 --arch x86_64
+
+      - name: Test App Store edition
+        run: swift test --scratch-path .build/appstore -Xswiftc -DAPP_STORE

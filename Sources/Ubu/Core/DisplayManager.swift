@@ -25,9 +25,12 @@ enum DockPosition: String, Sendable {
 
     @MainActor
     static func current() -> DockPosition {
+        #if !APP_STORE
+        // Blocked by the App Sandbox, so the App Store build goes straight to inference.
         if let orientation = UserDefaults(suiteName: "com.apple.dock")?.string(forKey: "orientation") {
             return from(orientation: orientation)
         }
+        #endif
         for screen in NSScreen.screens {
             if let position = inferred(frame: screen.frame, visibleFrame: screen.visibleFrame) {
                 return position

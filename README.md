@@ -69,6 +69,14 @@ Menu options: Pause/Resume, Start at Login, Check for Updates, Quit.
 - Works with any number of displays and all Dock positions (bottom, left, right)
 - The Dock is hidden in full-screen apps by macOS; ubu leaves those Spaces alone
 
+<h2>Privacy</h2>
+
+ubu collects nothing. See [PRIVACY.md](PRIVACY.md).
+
+<h2>App Store edition</h2>
+
+A sandboxed Mac App Store build ($0.99/year) is built from the same source with `-DAPP_STORE`. Setup and release steps: [Distribution/AppStore/README.md](Distribution/AppStore/README.md).
+
 <h2>Updates</h2>
 
 ubu checks GitHub Releases on launch and notifies you when a new version is available. You can also check manually from the menubar menu.
@@ -79,7 +87,9 @@ ubu checks GitHub Releases on launch and notifies you when a new version is avai
 Sources/Ubu/
 ├── App/
 │   ├── UbuApp.swift              # Entry point, lifecycle
+│   ├── AppState.swift            # Permission / subscription / pause → what to do
 │   ├── StatusBarController.swift # Menubar UI
+│   ├── SubscriptionManager.swift # StoreKit 2 (App Store edition only)
 │   └── PermissionManager.swift   # Accessibility permission
 ├── Core/
 │   ├── DisplayManager.swift      # Displays, Dock side, edge zones
@@ -91,7 +101,7 @@ Sources/Ubu/
 └── Utilities/
     ├── Logger.swift              # os_log wrapper
     ├── LoginItemManager.swift    # SMAppService wrapper
-    └── UpdateChecker.swift       # GitHub Releases version check
+    └── UpdateChecker.swift       # GitHub Releases check (GitHub edition only)
 ```
 
 <h2>License</h2>

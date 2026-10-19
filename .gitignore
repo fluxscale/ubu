@@ -31,3 +31,5 @@ icon-preview.html
 
 # SPM resolved file (commit this if you want reproducible builds)
 # Package.resolved
+Distribution/AppStore/*.provisionprofile
+ubu-appstore.pkg

@@ -14,23 +14,9 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-ubu-notary}"
 
 echo "=== Building ubu v${VERSION} ==="
 
-# Build universal binary
 echo "Building universal binary..."
 cd "$PROJECT_ROOT"
-swift build -c release --arch arm64 --arch x86_64
-
-# Multi-arch builds land in .build/apple/..., not .build/release. Ask SwiftPM rather
-# than guess: guessing shipped a stale arm64-only binary in v1.0.1 and v1.0.2.
-BINARY="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/ubu"
-ARCHS="$(lipo -archs "$BINARY")"
-if [[ "$ARCHS" != *arm64* || "$ARCHS" != *x86_64* ]]; then
-    echo "error: $BINARY is not universal (archs: $ARCHS)" >&2
-    exit 1
-fi
-if [[ -n "$(find "$PROJECT_ROOT/Sources" -name '*.swift' -newer "$BINARY")" ]]; then
-    echo "error: $BINARY is older than the sources" >&2
-    exit 1
-fi
+BINARY="$("$PROJECT_ROOT/Distribution/build-universal.sh")"
 
 # Create .app bundle
 echo "Creating app bundle..."
@@ -46,7 +32,7 @@ PLIST="$STAGING_DIR/$APP_NAME.app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$PLIST"
 
-cp "$PROJECT_ROOT/Resources/AppIcon.icns" "$STAGING_DIR/$APP_NAME.app/Contents/Resources/AppIcon.icns"
+cp "$PROJECT_ROOT/Resources/AppIcon.icns" "$PROJECT_ROOT/Resources/PrivacyInfo.xcprivacy" "$STAGING_DIR/$APP_NAME.app/Contents/Resources/"
 
 # Sign the app with hardened runtime (required for notarization)
 if [ -n "$SIGN_IDENTITY" ]; then

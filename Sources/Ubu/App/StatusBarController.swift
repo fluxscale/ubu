@@ -2,138 +2,144 @@ import AppKit
 
 @MainActor
 final class StatusBarController {
-    enum IconState {
-        case active
-        case paused
-        case warning
-    }
-
     private var statusItem: NSStatusItem?
     private let loginItemManager = LoginItemManager()
 
-    var onPauseToggle: ((Bool) -> Void)?
-    var onQuit: (() -> Void)?
+    private let statusLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+    private let pauseItem = NSMenuItem(title: "Pause Anchoring", action: nil, keyEquivalent: "p")
+    private let subscribeItem = NSMenuItem(title: "Subscribe…", action: nil, keyEquivalent: "")
+    private let restoreItem = NSMenuItem(title: "Restore Purchases", action: nil, keyEquivalent: "")
 
-    private var isPaused = false
+    var onPauseToggle: (() -> Void)?
+    var onGrantPermission: (() -> Void)?
+    var onSubscribe: (() -> Void)?
+    var onRestore: (() -> Void)?
+    var onQuit: (() -> Void)?
 
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        updateIcon(state: .active)
         buildMenu()
+        show(.active)
     }
 
-    func updateIcon(state: IconState) {
+    func show(_ state: AppState) {
         guard let button = statusItem?.button else { return }
+
+        let symbol: String
         switch state {
-        case .active:
-            button.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "ubu — active")
-                ?? makeTextIcon("U")
-            button.image?.isTemplate = true
-            button.appearsDisabled = false
-            button.contentTintColor = nil
-        case .paused:
-            button.image = NSImage(systemSymbolName: "pawprint", accessibilityDescription: "ubu — paused")
-                ?? makeTextIcon("U")
-            button.image?.isTemplate = true
-            button.appearsDisabled = true
-            button.contentTintColor = nil
-        case .warning:
-            button.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "ubu — needs permission")
-            button.image?.isTemplate = false
-            button.contentTintColor = .systemYellow
+        case .active: symbol = "pawprint.fill"
+        case .paused, .needsSubscription: symbol = "pawprint"
+        case .needsPermission: symbol = "exclamationmark.triangle.fill"
         }
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "ubu") ?? makeTextIcon("U")
+        button.image?.isTemplate = state != .needsPermission
+        button.contentTintColor = state == .needsPermission ? .systemYellow : nil
+        button.appearsDisabled = state == .paused || state == .needsSubscription
+
+        switch state {
+        case .active: statusLine.title = "✓ Dock Anchored to Primary Display"
+        case .paused: statusLine.title = "⏸ Anchoring Paused"
+        case .needsSubscription: statusLine.title = "Subscription Required"
+        case .needsPermission: statusLine.title = "Grant Accessibility Access…"
+        }
+        // Only the permission line does anything when clicked.
+        statusLine.action = state == .needsPermission ? #selector(grantPermission) : nil
+        statusLine.isEnabled = state == .needsPermission
+
+        pauseItem.title = state == .paused ? "Resume Anchoring" : "Pause Anchoring"
+        pauseItem.isEnabled = state == .active || state == .paused
+
+        subscribeItem.isHidden = state != .needsSubscription
+        restoreItem.isHidden = state != .needsSubscription
+    }
+
+    func setSubscribeTitle(_ title: String) {
+        subscribeItem.title = title
     }
 
     private func buildMenu() {
         let menu = NSMenu()
+        menu.autoenablesItems = false
 
-        let statusMenuItem = NSMenuItem(title: "✓ Dock Anchored to Primary Display", action: nil, keyEquivalent: "")
-        statusMenuItem.isEnabled = false
-        statusMenuItem.tag = 100
-        menu.addItem(statusMenuItem)
+        statusLine.target = self
+        menu.addItem(statusLine)
+        menu.addItem(.separator())
 
-        menu.addItem(NSMenuItem.separator())
+        #if APP_STORE
+        subscribeItem.target = self
+        subscribeItem.action = #selector(subscribe)
+        menu.addItem(subscribeItem)
+        restoreItem.target = self
+        restoreItem.action = #selector(restore)
+        menu.addItem(restoreItem)
+        #endif
 
-        let pauseItem = NSMenuItem(title: "Pause Anchoring", action: #selector(togglePause(_:)), keyEquivalent: "p")
         pauseItem.target = self
-        pauseItem.tag = 101
+        pauseItem.action = #selector(togglePause)
         menu.addItem(pauseItem)
+        menu.addItem(.separator())
 
-        menu.addItem(NSMenuItem.separator())
-
-        let loginItem = NSMenuItem(title: "Start at Login", action: #selector(toggleLoginItem(_:)), keyEquivalent: "")
-        loginItem.target = self
+        let loginItem = item("Start at Login", #selector(toggleLoginItem(_:)))
         loginItem.state = loginItemManager.isEnabled ? .on : .off
-        loginItem.tag = 102
         menu.addItem(loginItem)
+        menu.addItem(.separator())
 
-        menu.addItem(NSMenuItem.separator())
-
-        let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates(_:)), keyEquivalent: "")
-        updateItem.target = self
-        menu.addItem(updateItem)
-
-        let aboutItem = NSMenuItem(title: "About ubu", action: #selector(showAbout(_:)), keyEquivalent: "")
-        aboutItem.target = self
-        menu.addItem(aboutItem)
-
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quit(_:)), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
+        #if APP_STORE
+        menu.addItem(item("Manage Subscription…", #selector(manageSubscription)))
+        menu.addItem(item("Privacy Policy", #selector(openPrivacyPolicy)))
+        menu.addItem(item("Terms of Use", #selector(openTerms)))
+        #else
+        menu.addItem(item("Check for Updates…", #selector(checkForUpdates)))
+        #endif
+        menu.addItem(item("About ubu", #selector(showAbout)))
+        menu.addItem(item("Quit", #selector(quit), key: "q"))
 
         statusItem?.menu = menu
     }
 
-    func updateStatusText(isPaused: Bool) {
-        guard let menu = statusItem?.menu else { return }
-        if let item = menu.item(withTag: 100) {
-            item.title = isPaused ? "⏸ Anchoring Paused" : "✓ Dock Anchored to Primary Display"
-        }
-        if let item = menu.item(withTag: 101) {
-            item.title = isPaused ? "Resume Anchoring" : "Pause Anchoring"
-        }
+    private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = self
+        return item
     }
 
-    @objc private func togglePause(_ sender: NSMenuItem) {
-        isPaused.toggle()
-        updateStatusText(isPaused: isPaused)
-        updateIcon(state: isPaused ? .paused : .active)
-        onPauseToggle?(isPaused)
-    }
+    @objc private func togglePause() { onPauseToggle?() }
+    @objc private func grantPermission() { onGrantPermission?() }
+    @objc private func subscribe() { onSubscribe?() }
+    @objc private func restore() { onRestore?() }
 
     @objc private func toggleLoginItem(_ sender: NSMenuItem) {
         let newState = !loginItemManager.isEnabled
         loginItemManager.setEnabled(newState)
-        sender.state = newState ? .on : .off
+        sender.state = loginItemManager.isEnabled ? .on : .off
     }
 
-    @objc private func checkForUpdates(_ sender: NSMenuItem) {
-        UpdateChecker.checkInBackground(silent: false)
-    }
+    #if !APP_STORE
+    @objc private func checkForUpdates() { UpdateChecker.checkInBackground(silent: false) }
+    #endif
+    @objc private func manageSubscription() { NSWorkspace.shared.open(Links.manageSubscriptions) }
+    @objc private func openPrivacyPolicy() { NSWorkspace.shared.open(Links.privacyPolicy) }
+    @objc private func openTerms() { NSWorkspace.shared.open(Links.termsOfUse) }
 
-    @objc private func showAbout(_ sender: NSMenuItem) {
+    @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "ubu"
-        alert.informativeText = "Keeps your Dock on your primary display.\n\nVersion \(UpdateChecker.currentVersion)\nMIT License"
-        alert.alertStyle = .informational
+        alert.informativeText = "Keeps your Dock on your primary display.\n\nVersion \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")\nMIT License"
         alert.addButton(withTitle: "OK")
         alert.runModal()
     }
 
-    @objc private func quit(_ sender: NSMenuItem) {
+    @objc private func quit() {
         onQuit?()
         NSApp.terminate(nil)
     }
 
     private func makeTextIcon(_ text: String) -> NSImage {
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: false) { _ in
-            let attributes: [NSAttributedString.Key: Any] = [
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            NSAttributedString(string: text, attributes: [
                 .font: NSFont.systemFont(ofSize: 14, weight: .bold),
-                .foregroundColor: NSColor.black
-            ]
-            let str = NSAttributedString(string: text, attributes: attributes)
-            str.draw(at: NSPoint(x: 3, y: 1))
+                .foregroundColor: NSColor.black,
+            ]).draw(at: NSPoint(x: 3, y: 1))
             return true
         }
         image.isTemplate = true

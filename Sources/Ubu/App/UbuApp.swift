@@ -20,59 +20,78 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var permissionTimer: Timer?
     private var hasShownFirstBlockNotification = false
 
+    private var isTrusted = PermissionManager.isTrusted
+    private var isPaused = false
+    #if APP_STORE
+    private let subscription = SubscriptionManager()
+    // Locked until StoreKit reports an active subscription.
+    private var isSubscribed: Bool { subscription.isSubscribed }
+    #else
+    private let isSubscribed = true
+    #endif
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.app.info("ubu starting up")
 
         statusBar.setup()
-
-        statusBar.onPauseToggle = { [weak self] paused in
-            if paused {
-                self?.dockMonitor.stop()
-                Log.app.info("Monitoring paused by user")
-            } else {
-                self?.startMonitoring()
-            }
+        statusBar.onPauseToggle = { [weak self] in
+            guard let self else { return }
+            self.isPaused.toggle()
+            self.apply()
         }
-
+        statusBar.onGrantPermission = { PermissionManager.requestAccessibility() }
         statusBar.onQuit = { [weak self] in
             self?.dockMonitor.stop()
             Log.app.info("ubu shutting down")
         }
 
-        if PermissionManager.isTrusted {
-            startMonitoring()
-        } else {
-            statusBar.updateIcon(state: .warning)
-            PermissionManager.requestAccessibility()
-            permissionTimer = PermissionManager.waitForAccessibility { [weak self] in
-                self?.permissionTimer = nil
-                self?.startMonitoring()
-            }
-        }
-
-        LoginItemManager().registerOnFirstLaunch()
-
-        UpdateChecker.checkInBackground(silent: true)
-    }
-
-    private func startMonitoring() {
-        dockMonitor.onStateChanged = { [weak self] in
-            guard let self else { return }
-            self.statusBar.updateIcon(state: self.dockMonitor.isRunning ? .active : .paused)
-        }
-
         dockMonitor.onFirstMigrationBlocked = { [weak self] in
             guard let self, !self.hasShownFirstBlockNotification else { return }
             self.hasShownFirstBlockNotification = true
-            self.sendNotification(
-                title: "ubu",
-                body: "ubu is keeping your Dock on your primary display."
-            )
+            self.sendNotification(title: "ubu", body: "ubu is keeping your Dock on your primary display.")
         }
 
-        dockMonitor.start()
-        statusBar.updateIcon(state: .active)
-        Log.app.info("Monitoring started")
+        if !isTrusted {
+            PermissionManager.requestAccessibility()
+            permissionTimer = PermissionManager.waitForAccessibility { [weak self] in
+                self?.permissionTimer = nil
+                self?.isTrusted = true
+                self?.apply()
+            }
+        }
+
+        #if APP_STORE
+        // App Review: no launch at login without the user opting in, and no self-updating.
+        statusBar.onSubscribe = { [weak self] in
+            Task { await self?.subscription.purchase() }
+        }
+        statusBar.onRestore = { [weak self] in
+            Task { await self?.subscription.restore() }
+        }
+        subscription.onChange = { [weak self] in
+            guard let self else { return }
+            self.statusBar.setSubscribeTitle(self.subscription.purchaseTitle)
+            self.apply()
+        }
+        subscription.start()
+        #else
+        LoginItemManager().registerOnFirstLaunch()
+        UpdateChecker.checkInBackground(silent: true)
+        #endif
+
+        apply()
+    }
+
+    /// Brings the monitor and the menu in line with the current state.
+    private func apply() {
+        let state = AppState.resolve(trusted: isTrusted, subscribed: isSubscribed, paused: isPaused)
+        if state.isMonitoring {
+            dockMonitor.start()
+        } else {
+            dockMonitor.stop()
+        }
+        statusBar.show(state)
+        Log.app.info("State: \(String(describing: state))")
     }
 
     private func sendNotification(title: String, body: String) {

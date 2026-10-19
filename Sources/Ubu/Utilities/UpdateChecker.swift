@@ -1,3 +1,4 @@
+#if !APP_STORE // The App Store updates the App Store edition; self-updating is not allowed there.
 import AppKit
 
 @MainActor
@@ -69,3 +70,4 @@ enum UpdateChecker {
         alert.runModal()
     }
 }
+#endif

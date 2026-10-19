@@ -13,6 +13,7 @@ final class AppBehaviourTests: XCTestCase {
         XCTAssertFalse(LoginItemManager.claimFirstLaunch(defaults))
     }
 
+    #if !APP_STORE
     func testVersionComparison() {
         XCTAssertTrue(UpdateChecker.compareVersions("1.1.0", isNewerThan: "1.0.2"))
         XCTAssertTrue(UpdateChecker.compareVersions("1.0.10", isNewerThan: "1.0.9"), "numeric, not lexical")
@@ -21,4 +22,5 @@ final class AppBehaviourTests: XCTestCase {
         XCTAssertFalse(UpdateChecker.compareVersions("1.0", isNewerThan: "1.0.0"))
         XCTAssertFalse(UpdateChecker.compareVersions("1.0.1", isNewerThan: "1.0.2"))
     }
+    #endif
 }
