@@ -33,8 +33,16 @@ enum SingleInstance {
         DistributedNotificationCenter.default().addObserver(
             forName: quitNotification, object: nil, queue: .main
         ) { note in
-            guard isFromAnotherCopy(sender: note.object as? String, me: me) else { return }
+            let senderPID = note.object as? String
+            guard isFromAnotherCopy(sender: senderPID, me: me) else { return }
             MainActor.assumeIsolated {
+                // Anyone can post a distributed notification: only obey a running ubu.
+                guard let pid = senderPID.flatMap(pid_t.init),
+                      let sender = NSRunningApplication(processIdentifier: pid),
+                      let id = sender.bundleIdentifier, bundleIDs.contains(id) else {
+                    Log.app.error("Ignoring quit request from a process that isn't ubu")
+                    return
+                }
                 Log.app.info("A newer ubu launched; quitting")
                 quit()
             }
