@@ -60,7 +60,7 @@ No private APIs, no Dock restarts.
 | Outline paw | Paused |
 | Warning triangle | Needs Accessibility permission |
 
-Menu options: Pause/Resume, Start at Login, Check for Updates, Quit.
+Menu options: Pause/Resume, Restart Dock (unfreezes a stuck Dock; GitHub edition only, the App Store sandbox blocks it), Start at Login, Check for Updates, Quit.
 
 <h2>Requirements</h2>
 

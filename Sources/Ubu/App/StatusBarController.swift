@@ -77,6 +77,10 @@ final class StatusBarController {
         pauseItem.target = self
         pauseItem.action = #selector(togglePause)
         menu.addItem(pauseItem)
+        #if !APP_STORE
+        // ponytail: the App Sandbox denies launchctl kickstart ("Operation not permitted"), so GitHub edition only.
+        menu.addItem(item("Restart Dock", #selector(restartDock)))
+        #endif
         menu.addItem(.separator())
 
         let loginItem = item("Start at Login", #selector(toggleLoginItem(_:)))
@@ -116,6 +120,30 @@ final class StatusBarController {
 
     #if !APP_STORE
     @objc private func checkForUpdates() { UpdateChecker.checkInBackground(silent: false) }
+
+    /// Unfreezes a stuck Dock. `-k` makes launchd kill and relaunch it; a plain kill
+    /// would leave it dead on macOS 26.
+    @objc private func restartDock() {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        process.arguments = ["kickstart", "-k", "gui/\(getuid())/com.apple.Dock.agent"]
+        process.terminationHandler = { process in
+            let status = process.terminationStatus
+            Log.app.info("Restart Dock: launchctl exited \(status)")
+            guard status != 0 else { return }
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Couldn't Restart the Dock"
+                alert.informativeText = "launchctl exited with status \(status)."
+                alert.runModal()
+            }
+        }
+        do {
+            try process.run()
+        } catch {
+            NSAlert(error: error).runModal()
+        }
+    }
     #endif
     @objc private func manageSubscription() { NSWorkspace.shared.open(Links.manageSubscriptions) }
     @objc private func openPrivacyPolicy() { NSWorkspace.shared.open(Links.privacyPolicy) }
