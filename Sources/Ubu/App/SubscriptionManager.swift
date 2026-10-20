@@ -65,7 +65,38 @@ final class SubscriptionManager {
             : "Subscribe — \(product.displayPrice)/year…"
     }
 
-    func purchase() async {
+    /// Shown above the purchase button, e.g. "Free for 1 week, then $1.99/year."
+    var offerDescription: String {
+        guard let product, let subscription = product.subscription else {
+            return "Yearly subscription"
+        }
+        let price = "\(product.displayPrice)/\(Self.unitName(subscription.subscriptionPeriod.unit))"
+        if isEligibleForTrial, let offer = subscription.introductoryOffer, offer.paymentMode == .freeTrial {
+            return "Free for \(Self.describe(offer.period)), then \(price). Cancel anytime."
+        }
+        return "\(price)."
+    }
+
+    static func describe(_ period: Product.SubscriptionPeriod) -> String {
+        describe(value: period.value, unit: unitName(period.unit))
+    }
+
+    static func describe(value: Int, unit: String) -> String {
+        value == 1 ? "1 \(unit)" : "\(value) \(unit)s"
+    }
+
+    static func unitName(_ unit: Product.SubscriptionPeriod.Unit) -> String {
+        switch unit {
+        case .day: "day"
+        case .week: "week"
+        case .month: "month"
+        case .year: "year"
+        @unknown default: "period"
+        }
+    }
+
+    /// `window` hosts Apple's payment sheet; without one a menu-bar app's purchase stalls.
+    func purchase(in window: NSWindow) async {
         if product == nil { await refresh() }
         guard let product else {
             if let productLoadError {
@@ -79,7 +110,14 @@ final class SubscriptionManager {
             return
         }
         do {
-            switch try await product.purchase() {
+            let result: Product.PurchaseResult
+            if #available(macOS 15.2, *) {
+                result = try await product.purchase(confirmIn: window)
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+                result = try await product.purchase()
+            }
+            switch result {
             case .success(.verified(let transaction)):
                 await transaction.finish()
                 await refresh()

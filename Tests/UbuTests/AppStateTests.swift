@@ -25,3 +25,14 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(state.isMonitoring)
     }
 }
+
+#if APP_STORE
+@MainActor
+final class SubscriptionTextTests: XCTestCase {
+    func testPeriodWording() {
+        XCTAssertEqual(SubscriptionManager.describe(value: 1, unit: "week"), "1 week")
+        XCTAssertEqual(SubscriptionManager.describe(value: 3, unit: "day"), "3 days")
+        XCTAssertEqual(SubscriptionManager.unitName(.year), "year")
+    }
+}
+#endif

@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isPaused = false
     #if APP_STORE
     private let subscription = SubscriptionManager()
+    private lazy var paywall = PaywallWindow(subscription: subscription)
     // Locked until StoreKit reports an active subscription.
     private var isSubscribed: Bool { subscription.isSubscribed }
     #else
@@ -63,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if APP_STORE
         // App Review: no launch at login without the user opting in, and no self-updating.
         statusBar.onSubscribe = { [weak self] in
-            Task { await self?.subscription.purchase() }
+            self?.paywall.show()
         }
         statusBar.onRestore = { [weak self] in
             Task { await self?.subscription.restore() }
@@ -71,6 +72,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         subscription.onChange = { [weak self] in
             guard let self else { return }
             self.statusBar.setSubscribeTitle(self.subscription.purchaseTitle)
+            if self.subscription.isSubscribed {
+                self.paywall.close()
+            } else {
+                self.paywall.refresh()
+            }
             self.apply()
         }
         subscription.start()
