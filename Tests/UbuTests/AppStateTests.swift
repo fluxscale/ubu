@@ -36,3 +36,16 @@ final class SubscriptionTextTests: XCTestCase {
     }
 }
 #endif
+
+final class SingleInstanceTests: XCTestCase {
+    func testOnlyAnotherCopysRequestQuits() {
+        XCTAssertTrue(SingleInstance.isFromAnotherCopy(sender: "200", me: "100"))
+        XCTAssertFalse(SingleInstance.isFromAnotherCopy(sender: "100", me: "100"))
+        XCTAssertFalse(SingleInstance.isFromAnotherCopy(sender: nil, me: "100"))
+    }
+
+    @MainActor
+    func testCoversBothEditions() {
+        XCTAssertEqual(Set(SingleInstance.bundleIDs), ["com.ubu.app", "com.fluxscale.ubu"])
+    }
+}

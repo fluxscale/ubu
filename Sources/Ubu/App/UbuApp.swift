@@ -34,6 +34,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.app.info("ubu starting up")
 
+        let survivors = SingleInstance.takeOver()
+        guard survivors.isEmpty else {
+            SingleInstance.explain(survivors)
+            NSApp.terminate(nil)
+            return
+        }
+        SingleInstance.quitWhenReplaced { [weak self] in
+            self?.dockMonitor.stop()
+            NSApp.terminate(nil)
+        }
+
         statusBar.setup()
         statusBar.onPauseToggle = { [weak self] in
             guard let self else { return }
