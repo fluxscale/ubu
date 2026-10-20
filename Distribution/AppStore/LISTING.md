@@ -96,7 +96,7 @@ ubu does not read keystrokes, other apps' content, or anything other than pointe
 HOW TO TEST
 This needs two displays (an external monitor, or an iPad via Sidecar).
 1. Launch ubu. A paw print appears in the menu bar. Grant Accessibility when asked.
-2. Choose "Start Free Trial…" from the menu and complete the sandbox purchase.
+2. Choose "Start Free Trial…" from the menu. A window shows the price and terms; click Start Free Trial and complete the sandbox purchase.
 3. Push the pointer firmly against the bottom edge of the secondary display. Without ubu the Dock moves there; with ubu it stays on the main display.
 4. Choose "Pause Anchoring" and repeat: the Dock moves again, as in standard macOS.
 A screen recording of these steps is attached.

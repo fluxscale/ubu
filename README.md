@@ -28,7 +28,7 @@ swift build -c release
 <h3>Create DMG</h3>
 
 ```bash
-Distribution/DMG/create-dmg.sh 1.1.0
+Distribution/DMG/create-dmg.sh 1.1.1
 ```
 
 <h2>Setup</h2>
